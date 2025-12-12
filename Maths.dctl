@@ -1,0 +1,93 @@
+// Math.dctl
+
+DEFINE_UI_PARAMS(RAdd, RAdd, DCTLUI_VALUE_BOX, 0.0f)
+DEFINE_UI_PARAMS(GAdd, GAdd, DCTLUI_VALUE_BOX, 0.0f)
+DEFINE_UI_PARAMS(BAdd, BAdd, DCTLUI_VALUE_BOX, 0.0f)
+
+DEFINE_UI_PARAMS(RSub, RSub, DCTLUI_VALUE_BOX, 0.0f)
+DEFINE_UI_PARAMS(GSub, GSub, DCTLUI_VALUE_BOX, 0.0f)
+DEFINE_UI_PARAMS(BSub, BSub, DCTLUI_VALUE_BOX, 0.0f)
+
+DEFINE_UI_PARAMS(RMul, RMul, DCTLUI_VALUE_BOX, 1.0f)
+DEFINE_UI_PARAMS(GMul, GMul, DCTLUI_VALUE_BOX, 1.0f)
+DEFINE_UI_PARAMS(BMul, BMul, DCTLUI_VALUE_BOX, 1.0f)
+
+DEFINE_UI_PARAMS(RDiv, RDiv, DCTLUI_VALUE_BOX, 1.0f)
+DEFINE_UI_PARAMS(GDiv, GDiv, DCTLUI_VALUE_BOX, 1.0f)
+DEFINE_UI_PARAMS(BDiv, BDiv, DCTLUI_VALUE_BOX, 1.0f)
+
+// (0=off, 1=on) 
+// Direct
+DEFINE_UI_PARAMS(LnOn,     LnOn,     DCTLUI_VALUE_BOX, 0.0f)  // ln(x)
+DEFINE_UI_PARAMS(Log10On,  Log10On,  DCTLUI_VALUE_BOX, 0.0f)  // log10(x)
+DEFINE_UI_PARAMS(ExpOn,    ExpOn,    DCTLUI_VALUE_BOX, 0.0f)  // e^x
+DEFINE_UI_PARAMS(Exp2On,   Exp2On,   DCTLUI_VALUE_BOX, 0.0f)  // 2^x
+DEFINE_UI_PARAMS(SqrtOn,   SqrtOn,   DCTLUI_VALUE_BOX, 0.0f)  // sqrt(x)
+DEFINE_UI_PARAMS(AbsOn,    AbsOn,    DCTLUI_VALUE_BOX, 0.0f)  // |x|
+DEFINE_UI_PARAMS(NegOn,    NegOn,    DCTLUI_VALUE_BOX, 0.0f)  // -x
+// Inverses
+DEFINE_UI_PARAMS(LnInvOn,     LnInvOn,     DCTLUI_VALUE_BOX, 0.0f)  // exp(x)
+DEFINE_UI_PARAMS(Log10InvOn,  Log10InvOn,  DCTLUI_VALUE_BOX, 0.0f)  // 10^x
+DEFINE_UI_PARAMS(ExpInvOn,    ExpInvOn,    DCTLUI_VALUE_BOX, 0.0f)  // ln(x)
+DEFINE_UI_PARAMS(Exp2InvOn,   Exp2InvOn,   DCTLUI_VALUE_BOX, 0.0f)  // log2(x)
+DEFINE_UI_PARAMS(SqrtInvOn,   SqrtInvOn,   DCTLUI_VALUE_BOX, 0.0f)  // x^2
+DEFINE_UI_PARAMS(AbsInvOn,    AbsInvOn,    DCTLUI_VALUE_BOX, 0.0f)  // restore sign(v) by v0
+DEFINE_UI_PARAMS(NegInvOn,    NegInvOn,    DCTLUI_VALUE_BOX, 0.0f)  // -x
+
+__DEVICE__ float _safe_div_keep(float num, float den) {
+    return (fabs(den) < 1e-12f) ? num : (num / den);
+}
+__DEVICE__ float _safe_ln(float x) {
+    return log(x <= 0.0f ? 1e-12f : x);
+}
+__DEVICE__ float _safe_log10(float x) {
+    return log10(x <= 0.0f ? 1e-12f : x);
+}
+__DEVICE__ float _log2_safe(float x) {
+    // log2(x) = ln(x)/ln(2)
+    return _safe_ln(x) * 1.4426950408889634f; // 1/ln(2)
+}
+__DEVICE__ float _safe_sqrt(float x) {
+    return sqrt(x < 0.0f ? 0.0f : x);
+}
+__DEVICE__ float _restore_sign(float v, float sign_ref) {
+    float mag = fabs(v);
+    return (sign_ref < 0.0f) ? -mag : mag;
+}
+__DEVICE__ int _as_bool(float x) {
+    return (x >= 0.5f) ? 1 : 0;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    float r0 = _safe_div_keep((p_R + RAdd - RSub) * RMul, RDiv);
+    float g0 = _safe_div_keep((p_G + GAdd - GSub) * GMul, GDiv);
+    float b0 = _safe_div_keep((p_B + BAdd - BSub) * BMul, BDiv);
+
+    int lnOn      = _as_bool(LnOn),      lnInvOn      = _as_bool(LnInvOn);
+    int log10On   = _as_bool(Log10On),   log10InvOn   = _as_bool(Log10InvOn);
+    int expOn     = _as_bool(ExpOn),     expInvOn     = _as_bool(ExpInvOn);
+    int exp2On    = _as_bool(Exp2On),    exp2InvOn    = _as_bool(Exp2InvOn);
+    int sqrtOn    = _as_bool(SqrtOn),    sqrtInvOn    = _as_bool(SqrtInvOn);
+    int absOn     = _as_bool(AbsOn),     absInvOn     = _as_bool(AbsInvOn);
+    int negOn     = _as_bool(NegOn),     negInvOn     = _as_bool(NegInvOn);
+
+    float r = r0, g = g0, b = b0;
+    if (lnOn)     { r = _safe_ln(r);    g = _safe_ln(g);    b = _safe_ln(b); }
+    if (log10On)  { r = _safe_log10(r); g = _safe_log10(g); b = _safe_log10(b); }
+    if (expOn)    { r = exp(r);         g = exp(g);         b = exp(b); }
+    if (exp2On)   { r = exp(r * 0.6931471805599453f); g = exp(g * 0.6931471805599453f); b = exp(b * 0.6931471805599453f); } // 2^x
+    if (sqrtOn)   { r = _safe_sqrt(r);  g = _safe_sqrt(g);  b = _safe_sqrt(b); }
+    if (absOn)    { r = fabs(r);        g = fabs(g);        b = fabs(b); }
+    if (negOn)    { r = -r;             g = -g;             b = -b; }
+
+    if (lnInvOn)     { r = exp(r);         g = exp(g);         b = exp(b); }                 // inverse of ln
+    if (log10InvOn)  { r = pow(10.0f, r);  g = pow(10.0f, g);  b = pow(10.0f, b); }         // inverse of log10
+    if (expInvOn)    { r = _safe_ln(r);    g = _safe_ln(g);    b = _safe_ln(b); }            // inverse of exp
+    if (exp2InvOn)   { r = _log2_safe(r);  g = _log2_safe(g);  b = _log2_safe(b); }         // inverse of 2^x
+    if (sqrtInvOn)   { r = r*r;            g = g*g;            b = b*b; }                    // inverse of sqrt
+    if (absInvOn)    { r = _restore_sign(r, r0); g = _restore_sign(g, g0); b = _restore_sign(b, b0); } // pseudo-inverse of |x|
+    if (negInvOn)    { r = -r;             g = -g;             b = -b; }                     // inverse of negate
+
+    return make_float3(r, g, b);
+}
