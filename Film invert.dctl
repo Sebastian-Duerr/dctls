@@ -1,8 +1,8 @@
 // The formulas are inspired by simple-inversion amoslu-photo
 
-DEFINE_UI_PARAMS(DminR, DminR, DCTLUI_SLIDER_FLOAT, 0.90f, 0.0f, 2.0f, 0.001f)
-DEFINE_UI_PARAMS(DminG, DminG, DCTLUI_SLIDER_FLOAT, 0.90f, 0.0f, 2.0f, 0.001f)
-DEFINE_UI_PARAMS(DminB, DminB, DCTLUI_SLIDER_FLOAT, 0.90f, 0.0f, 2.0f, 0.001f)
+DEFINE_UI_PARAMS(DminR, DminR, DCTLUI_SLIDER_FLOAT, 0.90f, 0.0f, 3.0f, 0.001f)
+DEFINE_UI_PARAMS(DminG, DminG, DCTLUI_SLIDER_FLOAT, 0.90f, 0.0f, 3.0f, 0.001f)
+DEFINE_UI_PARAMS(DminB, DminB, DCTLUI_SLIDER_FLOAT, 0.90f, 0.0f, 3.0f, 0.001f)
 
 DEFINE_UI_PARAMS(DmaxR, DmaxR, DCTLUI_SLIDER_FLOAT, 0.10f, 0.0f, 2.0f, 0.001f)
 DEFINE_UI_PARAMS(DmaxG, DmaxG, DCTLUI_SLIDER_FLOAT, 0.10f, 0.0f, 2.0f, 0.001f)
@@ -25,20 +25,20 @@ __DEVICE__ float _base_curve(float x, float gamma) {
     return _safe_div(num, denom, x);
 }
 
-__DEVICE__ float _invert_chan(float in_c, float dmin_c, float dmax_c, float gamma, float stops) {
+__DEVICE__ float _invert_chan(float in_c, float dmin_c, float dmax_c, float gamma, float Exposure) {
     float den = _safe_log10(dmin_c / dmax_c);
     float num = _safe_log10(dmin_c / in_c);
     float x   = _safe_div(num, den, 0.0f);  
 
     float y = _base_curve(x, gamma);  
-    y *= powf(2.0f, stops);    
+    y *= powf(2.0f, Exposure);    
     return y;                                       
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
 {
-    float r = _invert_chan(p_R, DminR, DmaxR, Gamma, ExposureStops);
-    float g = _invert_chan(p_G, DminG, DmaxG, Gamma, ExposureStops);
-    float b = _invert_chan(p_B, DminB, DmaxB, Gamma, ExposureStops);
+    float r = _invert_chan(p_R, DminR, DmaxR, Gamma, Exposure);
+    float g = _invert_chan(p_G, DminG, DmaxG, Gamma, Exposure);
+    float b = _invert_chan(p_B, DminB, DmaxB, Gamma, Exposure);
     return make_float3(r, g, b);
 }
