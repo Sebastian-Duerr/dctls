@@ -1,0 +1,27 @@
+// The original script was created by Juan Pablo Zambrano and published here: 
+// http://www.liftgammagain.com/forum/index.php?threads/home-scanning-negatives-proper-cineon-inversion.13714/post-166416.
+// I ported this script to the DCTL language.
+
+DEFINE_UI_PARAMS(DminR, "Dmin R", DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(DminG, "Dmin G", DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(DminB, "Dmin B", DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+
+DEFINE_UI_PARAMS(Density, "Density", DCTLUI_SLIDER_FLOAT, 2.046, 0.0, 3.0, 0.01)
+DEFINE_UI_PARAMS(Offset, "Offset", DCTLUI_SLIDER_FLOAT, 95.0, 0.0, 100.0, 0.1)
+
+DEFINE_UI_PARAMS(scaleR, "Scale R", DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
+DEFINE_UI_PARAMS(scaleG, "Scale G", DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
+DEFINE_UI_PARAMS(scaleB, "Scale B", DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    float rl = _log10f(DminR / p_R);
+    float gl = _log10f(DminG / p_G);
+    float bl = _log10f(DminB / p_B);
+
+    float r_out = (scaleR * rl * (1023.0f / Density) + Offset) * (1.0f / 1023.0f);
+    float g_out = (scaleG * gl * (1023.0f / Density) + Offset) * (1.0f / 1023.0f);
+    float b_out = (scaleB * bl * (1023.0f / Density) + Offset) * (1.0f / 1023.0f);
+
+    return make_float3(r_out, g_out, b_out);
+}
